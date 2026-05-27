@@ -22,3 +22,9 @@ print(dset.shape, dset.dtype) # to get an idea of what the DataSet looks like (d
 # Convert dset to numpy array & print first 10 rows
 data = np.array(dset)
 print(data[0:10, :])
+
+# There are three columns; we isolate the first column, which represents the amplitude of these seismic waves over time
+amplitude = data[:, 0]
+
+plt.plot(amplitude)
+plt.show()
