@@ -27,4 +27,26 @@ print(data[0:10, :])
 amplitude = data[:, 0]
 
 plt.plot(amplitude)
-plt.show()
+plt.show()plt.show()
+
+# Function: Find P and S waves by using thresholds
+def aboveThreshold(data, thresh): # returns index of first time it exceeds threshold
+    for i in data:
+        if i > thresh:
+            return np.where(data == i)
+        else:
+            return None
+
+# Function: Windowing / Sliding Average function
+def slidingAverage(time, data, windowSize):
+    windowAves = []
+    end = (-int(windowSize - 1)//2,int(windowSize - 1)//2) # endpoints for each average - half a window size around each point
+
+    for i in range(data.shape): # depending on if the index is near the end or not.
+        if i < windowSize/2:
+            windowAves.append(np.mean(np.abs(data[:i+end[1]]))) # append the mean between 0 and a + 1/2 window size
+        elif i > data.shape[0] - windowSize/2:
+            windowAves.append(np.mean(np.abs(data[i+end[0]:]))) # append the mean between a - 1/2 window size and last entry
+        else:
+            windowAves.append(np.mean(np.abs(data[i+end[0]:i+end[1]]))) # append the mean between 1/2 window size either side
+    return np.array(windowAves)
