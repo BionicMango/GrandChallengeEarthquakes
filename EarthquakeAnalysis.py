@@ -8,6 +8,8 @@ import h5py # for reading hdf5 files which are highly optimised data storages
 csvFile =  r'C:\Users\teert\Desktop\Grand Challenge\chunk2.csv'
 hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
 
+sampleF = 100
+
 df = pd.read_csv(csvFile)
 dft = h5py.File(hdf5File, 'r') # r = read only
 
@@ -17,7 +19,12 @@ print(list(dft.keys())) # hdf5 files can group datasets together under different
 print(list(dft['data'].keys())[0:10]) # checking how many keys are in the group dft['data'] - 'Data' is only one group, with 200,000 other groups of data.
 
 dset = dft['data']['109C.TA_20060723155859_EV'] # this is just the first DataSet in the Group dft['data']
-print(dset.shape, dset.dtype) # to get an idea of what the DataSet looks like (dim: 6000 x 3, type: float64)
+print(dset.shape, dset.dtype) # to get an idea of what the DataSet looks like (dim: 6000 x 3, type: float32)
+print(dset.attrs.keys()) # print keys for this dataset's metadat (has useful information e.g. p_status); similar to a dictionary but not quite
+
+# Setting manual onset & coda times to those specified in the metadata (note: coda is written as 2d array with single entry)
+onsetManual = (dset.attrs['p_arrival_sample']/100, dset.attrs['s_arrival_sample']/100, dset.attrs['coda_end_sample'][0][0]/100) # originally in hundredths of a second (e.g. 700.0 = 7.000 seconds)
+print(onsetManual) # printing to verify we have the right data
 
 # Convert dset to numpy array & print first 10 rows
 data = np.array(dset)
@@ -35,56 +42,90 @@ def aboveThreshold(data, thresh): # returns index of first time it exceeds thres
             return None
 
 # Function: Windowing / Sliding Average function
-def slidingAverage(time, data, windowSize):
-    windowAves = []
+def slidingAverage(data, windowSize):
+    slidingAves = np.zeros(data.shape)
     end = (-int(windowSize - 1)//2,int(windowSize - 1)//2) # endpoints for each average - half a window size around each point
 
-    for i in range(data.shape): # depending on if the index is near the end or not.
-        if i < windowSize/2:
-            windowAves.append(np.mean(np.abs(data[:i+end[1]]))) # append the mean between 0 and a + 1/2 window size
-        elif i > data.shape[0] - windowSize/2:
-            windowAves.append(np.mean(np.abs(data[i+end[0]:]))) # append the mean between a - 1/2 window size and last entry
-        else:
-            windowAves.append(np.mean(np.abs(data[i+end[0]:i+end[1]]))) # append the mean between 1/2 window size either side
-    return np.array(windowAves)
+    for col in range(data.shape[1]):
+        for row in range(data.shape[0]): # depending on if the index is near the end or not.
+            if row < windowSize/2:
+                slidingAves[row, col] = np.mean(np.abs(data[:row+end[1], col])) # mean of values between 0 and a + 1/2 window size
+            elif row > data.shape[0] - windowSize/2:
+                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:, col])) # mean of values between a - 1/2 window size and last entry
+            else:
+                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:row+end[1], col])) # mean of values between 1/2 window size either side
 
-def plotData(time, data, onset: tuple, margins=(0.5, 10000)): # onset = (p wave onset time, s wave onset time), 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(time, data, color='black', label='Seismic Amplitude')
+    return slidingAves
 
-    # Set x/y limits & labels
-    ax.set_xlim(min(time) - margins[0], max(time) + margins[0])
-    ax.set_xlabel('Time (s)')
-    ax.set_ylim(min(data) - margins[1], max(data) + margins[1])
-    ax.set_ylabel('Amplitude')
+def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 15000)): # onset = (p wave onset time, s wave onset time, coda (end)), 
+    fig, ax = plt.subplots(data.shape[1], 1, figsize=(15, 15))
+    i = 0 # looping variable for each axis
+    for waveform in data.T:
+        ax[i].plot(time, waveform, color='black', label='Seismic Amplitude')
+        ax[i].grid(True)
 
-    # If onset times are specified
-    if onset != (None, None):
-        ax.vlines(onset, min(data), max(data), color=('orange', 'red'), ls='--')
+        # Set x/y limits & labels
+        ax[i].set_xlim(min(time) - margins[0], max(time) + margins[0])
+        ax[i].set_xlabel('Time (s)')
+        ax[i].set_ylim(min(waveform) - margins[1], max(waveform) + margins[1])
+        ax[i].set_ylabel('Amplitude')
 
-        # P Wave Onset Time (Label) to 1 d.p.
-        ax.annotate(
-            f'P Wave Onset at {onset[0]:.1f}',
-            xy = (onset[0], min(data) - margins[1]/2),
-            xytext = (onset[0], min(data) - margins[1]/2),
-            fontweight = 'bold',
-            color = 'orange'
-        )
+        # If onset times are specified
+        if onset[0] != None:
+            # P Wave Onset Time (Line)
+            ax[i].vlines(onset[0], min(waveform), max(waveform), color='orange', ls='--')
+            ax[i].scatter(onset[0]+0.07, min(waveform), color='orange', marker='^')
 
-        # S Wave Onset Time (Label) to 1 d.p.
-        ax.annotate(
-            f'P Wave Onset at {onset[1]:.1f}',
-            xy = (onset[0], min(data) - margins[1]/2),
-            xytext = (onset[0], min(data) - margins[1]/2),
-            fontweight = 'bold',
-            color = 'red'
-        )
+            # P Wave Onset Time (Label) to 1 d.p.
+            ax[i].annotate(
+                f'P Wave Onset at {onset[0]:.1f}',
+                xy = (onset[0] + 0.5, min(waveform) - 2/3 * margins[1]),
+                xytext = (onset[0]  + 0.5, min(waveform) - 2/3 * margins[1]),
+                fontweight = 'bold',
+                color = 'orange'
+            )
 
-        # Adding onset detection signs
-        ax.scatter(onset, (min(data)-margins[1]/2, min(data)-margins[1]/2), color=('orange', 'red'), marker='^')
+        if onset[1] != None:
+            # S Wave Onset Time (Line)
+            ax[i].vlines(onset[1], min(waveform), max(waveform), color='red', ls='--')
+            ax[i].scatter(onset[1]+0.07, min(waveform), color='red', marker='^')
+
+            # S Wave Onset Time (Label) to 1 d.p.
+            ax[i].annotate(
+                f'S Wave Onset at {onset[1]:.1f}',
+                xy = (onset[1] + 0.5, min(waveform) - 2/3 * margins[1]),
+                xytext = (onset[1] + 0.5, min(waveform) - 2/3 * margins[1]),
+                fontweight = 'bold',
+                color = 'red'
+            )
+
+        if onset[2] != None:
+            # Coda End Sample (Line)
+            ax[i].vlines(onset[2], min(waveform), max(waveform), color='deepskyblue', ls='--')
+            ax[i].scatter(onset[2]+0.05, min(waveform), color='deepskyblue', marker='^')
+
+            # Coda End Sample
+            ax[i].annotate(
+                f'Coda at {onset[1]:.1f}',
+                xy = (onset[2] + 0.5, min(waveform) - 2/3 * margins[1]),
+                xytext = (onset[2] + 0.5, min(waveform) - 2/3* margins[1]),
+                fontweight = 'bold',
+                color = 'deepskyblue'
+            )
+
+            # Adding onset detection signs
+            ax[i].scatter(onset, (min(waveform), min(waveform), min(waveform)), color=('orange', 'red', 'cyan'), marker='^')
+
+        # Loop increment
+        i += 1
 
     fig.legend()
 
     plt.show()
 
-plotData(np.arange(0, 60, 0.01), amplitude, onset=(7, 14))
+# Plotting the three waveforms associated with the chosen earthquake
+time = np.arange(0, 60, 1/sampleF)
+plotData(time, data, onset=onsetManual)
+
+dataSmoothed = slidingAverage(data, 0.05*sampleF)
+plotData(time, dataSmoothed)
