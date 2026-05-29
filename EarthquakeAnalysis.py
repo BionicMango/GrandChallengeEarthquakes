@@ -11,7 +11,7 @@ hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
 df = pd.read_csv(csvFile)
 dft = h5py.File(hdf5File, 'r') # r = read only
 
-print(df.head()) # print first five rows to ensure it has loaded properly
+print('First five rows of \n', df.head()) # print first five rows to ensure it has loaded properly
 
 print(list(dft.keys())) # hdf5 files can group datasets together under different 'keys' (like dictionaries) - only one key means only one group 'data'
 print(list(dft['data'].keys())[0:10]) # checking how many keys are in the group dft['data'] - 'Data' is only one group, with 200,000 other groups of data.
@@ -25,9 +25,6 @@ print(data[0:10, :])
 
 # There are three columns; we isolate the first column, which represents the amplitude of these seismic waves over time
 amplitude = data[:, 0]
-
-plt.plot(amplitude)
-plt.show()plt.show()
 
 # Function: Find P and S waves by using thresholds
 def aboveThreshold(data, thresh): # returns index of first time it exceeds threshold
@@ -50,3 +47,44 @@ def slidingAverage(time, data, windowSize):
         else:
             windowAves.append(np.mean(np.abs(data[i+end[0]:i+end[1]]))) # append the mean between 1/2 window size either side
     return np.array(windowAves)
+
+def plotData(time, data, onset: tuple, margins=(0.5, 10000)): # onset = (p wave onset time, s wave onset time), 
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(time, data, color='black', label='Seismic Amplitude')
+
+    # Set x/y limits & labels
+    ax.set_xlim(min(time) - margins[0], max(time) + margins[0])
+    ax.set_xlabel('Time (s)')
+    ax.set_ylim(min(data) - margins[1], max(data) + margins[1])
+    ax.set_ylabel('Amplitude')
+
+    # If onset times are specified
+    if onset != (None, None):
+        ax.vlines(onset, min(data), max(data), color=('orange', 'red'), ls='--')
+
+        # P Wave Onset Time (Label) to 1 d.p.
+        ax.annotate(
+            f'P Wave Onset at {onset[0]:.1f}',
+            xy = (onset[0], min(data) - margins[1]/2),
+            xytext = (onset[0], min(data) - margins[1]/2),
+            fontweight = 'bold',
+            color = 'orange'
+        )
+
+        # S Wave Onset Time (Label) to 1 d.p.
+        ax.annotate(
+            f'P Wave Onset at {onset[1]:.1f}',
+            xy = (onset[0], min(data) - margins[1]/2),
+            xytext = (onset[0], min(data) - margins[1]/2),
+            fontweight = 'bold',
+            color = 'red'
+        )
+
+        # Adding onset detection signs
+        ax.scatter(onset, (min(data)-margins[1]/2, min(data)-margins[1]/2), color=('orange', 'red'), marker='^')
+
+    fig.legend()
+
+    plt.show()
+
+plotData(np.arange(0, 60, 0.01), amplitude, onset=(7, 14))
