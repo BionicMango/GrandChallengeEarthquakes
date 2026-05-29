@@ -8,12 +8,12 @@ import h5py # for reading hdf5 files which are highly optimised data storages
 csvFile =  r'C:\Users\teert\Desktop\Grand Challenge\chunk2.csv'
 hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
 
-sampleF = 100
+sampleF = 100 # in Hz, i.e. 100 samples every second (every 0.01 time step)
 
 df = pd.read_csv(csvFile)
 dft = h5py.File(hdf5File, 'r') # r = read only
 
-print('First five rows of \n', df.head()) # print first five rows to ensure it has loaded properly
+print('First five rows of df:\n', df.head()) # print first five rows to ensure it has loaded properly
 
 print(list(dft.keys())) # hdf5 files can group datasets together under different 'keys' (like dictionaries) - only one key means only one group 'data'
 print(list(dft['data'].keys())[0:10]) # checking how many keys are in the group dft['data'] - 'Data' is only one group, with 200,000 other groups of data.
@@ -28,7 +28,6 @@ print(onsetManual) # printing to verify we have the right data
 
 # Convert dset to numpy array & print first 10 rows
 data = np.array(dset)
-print(data[0:10, :])
 
 # There are three columns; we isolate the first column, which represents the amplitude of these seismic waves over time
 amplitude = data[:, 0]
@@ -57,7 +56,7 @@ def slidingAverage(data, windowSize):
 
     return slidingAves
 
-def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 15000)): # onset = (p wave onset time, s wave onset time, coda (end)), 
+def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 12000)): # onset = (p wave onset time, s wave onset time, coda (end)), 
     fig, ax = plt.subplots(data.shape[1], 1, figsize=(15, 15))
     i = 0 # looping variable for each axis
     for waveform in data.T:
@@ -73,8 +72,7 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 15000)
         # If onset times are specified
         if onset[0] != None:
             # P Wave Onset Time (Line)
-            ax[i].vlines(onset[0], min(waveform), max(waveform), color='orange', ls='--')
-            ax[i].scatter(onset[0]+0.07, min(waveform), color='orange', marker='^')
+            ax[i].vlines(onset[0], min(waveform) - margins[1], max(waveform) + margins[1], color='orange', ls='--')
 
             # P Wave Onset Time (Label) to 1 d.p.
             ax[i].annotate(
@@ -87,8 +85,7 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 15000)
 
         if onset[1] != None:
             # S Wave Onset Time (Line)
-            ax[i].vlines(onset[1], min(waveform), max(waveform), color='red', ls='--')
-            ax[i].scatter(onset[1]+0.07, min(waveform), color='red', marker='^')
+            ax[i].vlines(onset[1], min(waveform) - margins[1], max(waveform) + margins[1], color='red', ls='--')
 
             # S Wave Onset Time (Label) to 1 d.p.
             ax[i].annotate(
@@ -101,8 +98,7 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 15000)
 
         if onset[2] != None:
             # Coda End Sample (Line)
-            ax[i].vlines(onset[2], min(waveform), max(waveform), color='deepskyblue', ls='--')
-            ax[i].scatter(onset[2]+0.05, min(waveform), color='deepskyblue', marker='^')
+            ax[i].vlines(onset[2], min(waveform) - margins[1], max(waveform) + margins[1], color='deepskyblue', ls='--')
 
             # Coda End Sample
             ax[i].annotate(
@@ -113,13 +109,8 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 15000)
                 color = 'deepskyblue'
             )
 
-            # Adding onset detection signs
-            ax[i].scatter(onset, (min(waveform), min(waveform), min(waveform)), color=('orange', 'red', 'cyan'), marker='^')
-
         # Loop increment
         i += 1
-
-    fig.legend()
 
     plt.show()
 
@@ -127,5 +118,5 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 15000)
 time = np.arange(0, 60, 1/sampleF)
 plotData(time, data, onset=onsetManual)
 
-dataSmoothed = slidingAverage(data, 0.05*sampleF)
-plotData(time, dataSmoothed)
+windowSize, threshold = 0.8*sampleF, 5000
+dataSmoothed = slidingAverage(data, 0.8*sampleF)
