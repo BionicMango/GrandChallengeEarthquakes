@@ -134,8 +134,10 @@ def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
     onsetDiff = np.zeros(3)
     for i in range(3):
         onsetDiff[i] = onsetAlg[i] - onsetManual[i]
+
+    spLag = onsetAlg[1] - onsetAlg[0] # the S-P lag = time between p wave onset and s wave onset, useful for calculating distance to epicentre since p and s waves travel at different speeds
     
-    return onsetDiff
+    return onsetDiff, spLag
 
 ## TESTTING EARTHQUAKE DETECTION ALGORITHM
 hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
@@ -153,12 +155,15 @@ earthquakeDetection(dset, plotGraph=True) # visualise the first dataset
 dsetKeys = list(dft['data'].keys())
 numDsets = 200 # number of dsets to loop through
 onsetDiffs = np.zeros((numDsets, 3))
+spLag = np.zeros((numDsets, 1))
 for i in range(numDsets):
     dset = dft['data'][dsetKeys[i]] # picks the i-th dataset from the group dft['data']
-    onsetDiffs[i] = earthquakeDetection(dset)
+    onsetDiffs[i], spLag[i] = earthquakeDetection(dset)
 
 # Print these differences to csv to view later
 df = pd.DataFrame(onsetDiffs)
 df.columns = ['P Wave Onset Diff', 'S Wave Onset Diff', 'Coda Diff']
+df['S-P Lag (s)'] = spLag # adding S-P Lag column
+
 print(df)
 df.to_csv(r'C:\Users\teert\Documents\GitHub\GrandChallengeEarthquakes\output.csv', index=False)
