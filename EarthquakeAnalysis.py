@@ -4,41 +4,26 @@ import pandas as pd # for csv handling as DataFrames and Series
 import matplotlib.pyplot as plt # for plotting
 import h5py # for reading hdf5 files which are highly optimised data storages
 
-# Store File Paths so that they can be altered easily if necessary
-csvFile =  r'C:\Users\teert\Desktop\Grand Challenge\chunk2.csv'
-hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
-
+### CONSTANTS ###
 sampleF = 100 # in Hz, i.e. 100 samples every second (every 0.01 time step)
-
-df = pd.read_csv(csvFile)
-dft = h5py.File(hdf5File, 'r') # r = read only
-
-print('First five rows of df:\n', df.head()) # print first five rows to ensure it has loaded properly
-
-print(list(dft.keys())) # hdf5 files can group datasets together under different 'keys' (like dictionaries) - only one key means only one group 'data'
-print(list(dft['data'].keys())[0:10]) # checking how many keys are in the group dft['data'] - 'Data' is only one group, with 200,000 other groups of data.
-
-dset = dft['data']['109C.TA_20060723155859_EV'] # this is just the first DataSet in the Group dft['data']
-print(dset.shape, dset.dtype) # to get an idea of what the DataSet looks like (dim: 6000 x 3, type: float32)
-print(dset.attrs.keys()) # print keys for this dataset's metadat (has useful information e.g. p_status); similar to a dictionary but not quite
-
-# Setting manual onset & coda times to those specified in the metadata (note: coda is written as 2d array with single entry)
-onsetManual = (dset.attrs['p_arrival_sample']/100, dset.attrs['s_arrival_sample']/100, dset.attrs['coda_end_sample'][0][0]/100) # originally in hundredths of a second (e.g. 700.0 = 7.000 seconds)
-print(onsetManual) # printing to verify we have the right data
-
-# Convert dset to numpy array & print first 10 rows
-data = np.array(dset)
-
-# There are three columns; we isolate the first column, which represents the amplitude of these seismic waves over time
-amplitude = data[:, 0]
+time = np.arange(0, 60, 1/sampleF)
+windowSize = 80
+threshold = {
+    'P': 200,
+    'S': 4750
+}
 
 # Function: Find P and S waves by using thresholds
-def aboveThreshold(data, thresh): # returns index of first time it exceeds threshold
-    for i in data:
-        if i > thresh:
-            return np.where(data == i)
-        else:
-            return None
+def aboveThreshold(waveform, thresh): # returns index of first time it exceeds threshold
+    aboveThresh = []
+
+    i = 0 # looping variable (easier to use while loop than for loop in this case)
+    while i < waveform.shape[0]:
+        if waveform[i] > thresh:
+            aboveThresh.append(i) # returns the index where this is true
+        i += 1
+
+    return int(aboveThresh[0]), int(aboveThresh[-1])
 
 # Function: Windowing / Sliding Average function
 def slidingAverage(data, windowSize):
@@ -102,7 +87,7 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 12000)
 
             # Coda End Sample
             ax[i].annotate(
-                f'Coda at {onset[1]:.1f}',
+                f'Coda at {onset[2]:.1f}',
                 xy = (onset[2] + 0.5, min(waveform) - 2/3 * margins[1]),
                 xytext = (onset[2] + 0.5, min(waveform) - 2/3* margins[1]),
                 fontweight = 'bold',
@@ -114,9 +99,35 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 12000)
 
     plt.show()
 
-# Plotting the three waveforms associated with the chosen earthquake
-time = np.arange(0, 60, 1/sampleF)
-plotData(time, data, onset=onsetManual)
+def earthquakeDetection(dset, margins=(0.5, 12000)):
+    data = np.array(dset)
 
-windowSize, threshold = 0.8*sampleF, 5000
-dataSmoothed = slidingAverage(data, 0.8*sampleF)
+    # Plot manual onset/offset times data
+    onsetManual = ( # originally in hundredths of a second, e.g.n 700.0 = 7 seconds
+        dset.attrs['p_arrival_sample']/100,
+        dset.attrs['s_arrival_sample']/100,
+        dset.attrs['coda_end_sample'][0][0]/100
+    )
+    plotData(time, data, onset=onsetManual, margins=margins)
+
+    # Algorithm detection
+    dataSmoothed = slidingAverage(data, windowSize)
+    onsetAlg = (
+        (1/sampleF) * min(aboveThreshold(dataSmoothed[:, 0], threshold['P'])[0], aboveThreshold(dataSmoothed[:, 1], threshold['P'])[0]),
+        (1/sampleF) * min(aboveThreshold(dataSmoothed[:, 0], threshold['S'])[0], aboveThreshold(dataSmoothed[:, 1], threshold['S'])[0]), # takes the first onset time of any direction
+        (1/sampleF) * np.mean([aboveThreshold(dataSmoothed[:, 0], threshold['S'])[1], aboveThreshold(dataSmoothed[:, 1], threshold['S'])[1]]) # mean offset of S wave = coda time
+    )
+    plotData(time, data, onset=onsetAlg, margins=margins)
+    plotData(time, dataSmoothed, onset=onsetAlg, margins=margins)
+
+## TESTTING EARTHQUAKE DETECTION ALGORITHM
+hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
+
+dft = h5py.File(hdf5File, 'r') # r = read only
+print(list(dft.keys())) # hdf5 files can group datasets together under different 'keys' (like dictionaries) - only one key means only one group 'data'
+print(list(dft['data'].keys())[0:10]) # checking how many keys are in the group dft['data'] - 'Data' is only one group, with 200,000 other groups of data.
+
+dset = dft['data']['109C.TA_20060723155859_EV'] # this is just the first DataSet in the Group dft['data']
+print(dset.shape, dset.dtype) # to get an idea of what the DataSet looks like (dim: 6000 x 3, type: float32)
+print(dset.attrs.keys()) # print keys for this dataset's metadat (has useful information e.g. p_status); similar to a dictionary but not quite
+earthquakeDetection(dset)
