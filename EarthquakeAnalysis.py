@@ -161,4 +161,4 @@ for i in range(numDsets):
 df = pd.DataFrame(onsetDiffs)
 df.columns = ['P Wave Onset Diff', 'S Wave Onset Diff', 'Coda Diff']
 print(df)
-df.to_csv(r'C:\Users\teert\Documents\GitHub\GrandChallengeEarthquakes\.venv\Scripts\output.csv', index=False)
+df.to_csv(r'C:\Users\teert\Documents\GitHub\GrandChallengeEarthquakes\output.csv', index=False)
