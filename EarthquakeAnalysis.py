@@ -147,7 +147,7 @@ print(list(dft['data'].keys())[0:10]) # checking how many keys are in the group 
 dset = dft['data'][list(dft['data'].keys())[0]] # random waveform
 print(dset.shape, dset.dtype) # to get an idea of what the DataSet looks like (dim: 6000 x 3, type: float32)
 print(dset.attrs.keys()) # print keys for this dataset's metadat (has useful information e.g. p_status); similar to a dictionary but not quite
-earthquakeDetection(dset) # visualise the first dataset
+earthquakeDetection(dset, plotGraph=True) # visualise the first dataset
 
 # Looping through many waveforms and seeing the difference between algorithm and manual onset/coda times
 dsetKeys = list(dft['data'].keys())
@@ -156,10 +156,6 @@ onsetDiffs = np.zeros((numDsets, 3))
 for i in range(numDsets):
     dset = dft['data'][dsetKeys[i]] # picks the i-th dataset from the group dft['data']
     onsetDiffs[i] = earthquakeDetection(dset)
-
-meanOnsetDiffs = [(np.log(np.abs(onsetDiffs[:, i])+1)).mean() for i in range(3)] # log based to see magnitude of difference (e.g. 0.5 means approximately 10^(-0.5) factor difference)
-print(onsetDiffs)
-print(f'The log means of the differences are as follows:\n{meanOnsetDiffs}')
 
 # Print these differences to csv to view later
 df = pd.DataFrame(onsetDiffs)
