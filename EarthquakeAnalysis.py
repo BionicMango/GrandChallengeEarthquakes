@@ -121,7 +121,7 @@ def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
     }
     onsetAlg = (
         (1/sampleF) * aboveThreshold(dataSmoothed[:, 2], threshRatio['P']*dataMax['P'])[0], # Vertical direction more accurate for this one only
-        (1/sampleF) * max(aboveThreshold(dataSmoothed[:, 0], threshRatio['S']*dataMax['S'])[0], aboveThreshold(dataSmoothed[:, 1], threshRatio['S']*dataMax['S'])[0]), # takes the first onset time of any direction
+        (1/sampleF) * 0.5*(aboveThreshold(dataSmoothed[:, 0], threshRatio['S']*dataMax['S'])[0] + aboveThreshold(dataSmoothed[:, 1], threshRatio['S']*dataMax['S'])[0]), # takes the mean onset time
         (1/sampleF) * 0.5*(aboveThreshold(dataSmoothed[:, 0], threshRatio['C']*dataMax['C'])[-1] + aboveThreshold(dataSmoothed[:, 1], threshRatio['C']*dataMax['C'])[-1]) # last coda time
     )
 
