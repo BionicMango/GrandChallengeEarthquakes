@@ -9,9 +9,9 @@ sampleF = 100 # in Hz, i.e. 100 samples every second (every 0.01 time step)
 time = np.arange(0, 60, 1/sampleF)
 windowSize = 80
 threshRatio = { # as a ratio of the max smoothened data height
-    'P': 1.6700e-2,
-    'S': 9.0348e-2,
-    'C': 9.0348e-2
+    'P': 1.8e-2,
+    'S': 1.5e-1,
+    'C': 9.0e-2
 }
 
 # Function: Find P and S waves by using thresholds
@@ -121,7 +121,7 @@ def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
     }
     onsetAlg = (
         (1/sampleF) * aboveThreshold(dataSmoothed[:, 2], threshRatio['P']*dataMax['P'])[0], # Vertical direction more accurate for this one only
-        (1/sampleF) * min(aboveThreshold(dataSmoothed[:, 0], threshRatio['S']*dataMax['S'])[0], aboveThreshold(dataSmoothed[:, 1], threshRatio['S']*dataMax['S'])[0]), # takes the first onset time of any direction
+        (1/sampleF) * max(aboveThreshold(dataSmoothed[:, 0], threshRatio['S']*dataMax['S'])[0], aboveThreshold(dataSmoothed[:, 1], threshRatio['S']*dataMax['S'])[0]), # takes the first onset time of any direction
         (1/sampleF) * 0.5*(aboveThreshold(dataSmoothed[:, 0], threshRatio['C']*dataMax['C'])[-1] + aboveThreshold(dataSmoothed[:, 1], threshRatio['C']*dataMax['C'])[-1]) # last coda time
     )
 
@@ -130,6 +130,12 @@ def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
         plotData(time, data, onset=onsetAlg, margins=margins)
         plotData(time, dataSmoothed, onset=onsetAlg, margins=margins)
 
+    # Return onset/coda time differences
+    onsetDiff = np.zeros(3)
+    for i in range(3):
+        onsetDiff[i] = onsetAlg[i] - onsetManual[i]
+    
+    return onsetDiff
 
 ## TESTTING EARTHQUAKE DETECTION ALGORITHM
 hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
@@ -141,5 +147,22 @@ print(list(dft['data'].keys())[0:10]) # checking how many keys are in the group 
 dset = dft['data'][list(dft['data'].keys())[0]] # random waveform
 print(dset.shape, dset.dtype) # to get an idea of what the DataSet looks like (dim: 6000 x 3, type: float32)
 print(dset.attrs.keys()) # print keys for this dataset's metadat (has useful information e.g. p_status); similar to a dictionary but not quite
+earthquakeDetection(dset) # visualise the first dataset
 
-earthquakeDetection(dset)
+# Looping through many waveforms and seeing the difference between algorithm and manual onset/coda times
+dsetKeys = list(dft['data'].keys())
+numDsets = 200 # number of dsets to loop through
+onsetDiffs = np.zeros((numDsets, 3))
+for i in range(numDsets):
+    dset = dft['data'][dsetKeys[i]] # picks the i-th dataset from the group dft['data']
+    onsetDiffs[i] = earthquakeDetection(dset)
+
+meanOnsetDiffs = [(np.log(np.abs(onsetDiffs[:, i])+1)).mean() for i in range(3)] # log based to see magnitude of difference (e.g. 0.5 means approximately 10^(-0.5) factor difference)
+print(onsetDiffs)
+print(f'The log means of the differences are as follows:\n{meanOnsetDiffs}')
+
+# Print these differences to csv to view later
+df = pd.DataFrame(onsetDiffs)
+df.columns = ['P Wave Onset Diff', 'S Wave Onset Diff', 'Coda Diff']
+print(df)
+df.to_csv(r'C:\Users\teert\Documents\GitHub\GrandChallengeEarthquakes\.venv\Scripts\output.csv', index=False)
