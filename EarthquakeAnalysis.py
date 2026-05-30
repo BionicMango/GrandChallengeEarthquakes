@@ -8,10 +8,10 @@ import h5py # for reading hdf5 files which are highly optimised data storages
 sampleF = 100 # in Hz, i.e. 100 samples every second (every 0.01 time step)
 time = np.arange(0, 60, 1/sampleF)
 windowSize = 80
-threshold = {
-    'P': 200,
-    'S': 4750,
-    'C': 5500
+threshRatio = { # as a ratio of the max smoothened data height
+    'P': 1.6700e-2,
+    'S': 9.0348e-2,
+    'C': 9.0348e-2
 }
 
 # Function: Find P and S waves by using thresholds
@@ -43,7 +43,7 @@ def slidingAverage(data, windowSize):
     return slidingAves
 
 # Plotting Function (to plot the three waveforms + onset/coda nicely)
-def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 12000)): # onset = (p wave onset time, s wave onset time, coda (end)), 
+def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 5000)): # onset = (p wave onset time, s wave onset time, coda (end)), 
     fig, ax = plt.subplots(data.shape[1], 1, figsize=(15, 15))
     i = 0 # looping variable for each axis
     for waveform in data.T:
@@ -102,7 +102,7 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 12000)
     plt.show()
 
 # Combined earthquake detection function
-def earthquakeDetection(dset, margins=(0.5, 12000)):
+def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
     data = np.array(dset)
 
     # Plot manual onset/offset times data
@@ -111,17 +111,25 @@ def earthquakeDetection(dset, margins=(0.5, 12000)):
         dset.attrs['s_arrival_sample']/100,
         dset.attrs['coda_end_sample'][0][0]/100
     )
-    plotData(time, data, onset=onsetManual, margins=margins)
 
     # Algorithm detection
     dataSmoothed = slidingAverage(data, windowSize)
+    dataMax = {
+        'P': np.max(data[:, 2]), # relies on vertical direction specifically
+        'S': np.max(data[:, :2]),
+        'C': np.max(data[:, :2])
+    }
     onsetAlg = (
-        (1/sampleF) * min(aboveThreshold(dataSmoothed[:, 0], threshold['P'])[0], aboveThreshold(dataSmoothed[:, 1], threshold['P'])[0]),
-        (1/sampleF) * min(aboveThreshold(dataSmoothed[:, 0], threshold['S'])[0], aboveThreshold(dataSmoothed[:, 1], threshold['S'])[0]), # takes the first onset time of any direction
-        (1/sampleF) * max([aboveThreshold(dataSmoothed[:, 0], threshold['C'])[1], aboveThreshold(dataSmoothed[:, 1], threshold['C'])[1]]) # last coda time
+        (1/sampleF) * aboveThreshold(dataSmoothed[:, 2], threshRatio['P']*dataMax['P'])[0], # Vertical direction more accurate for this one only
+        (1/sampleF) * min(aboveThreshold(dataSmoothed[:, 0], threshRatio['S']*dataMax['S'])[0], aboveThreshold(dataSmoothed[:, 1], threshRatio['S']*dataMax['S'])[0]), # takes the first onset time of any direction
+        (1/sampleF) * 0.5*(aboveThreshold(dataSmoothed[:, 0], threshRatio['C']*dataMax['C'])[-1] + aboveThreshold(dataSmoothed[:, 1], threshRatio['C']*dataMax['C'])[-1]) # last coda time
     )
-    plotData(time, data, onset=onsetAlg, margins=margins)
-    plotData(time, dataSmoothed, onset=onsetAlg, margins=margins)
+
+    if plotGraph:
+        plotData(time, data, onset=onsetManual, margins=margins)
+        plotData(time, data, onset=onsetAlg, margins=margins)
+        plotData(time, dataSmoothed, onset=onsetAlg, margins=margins)
+
 
 ## TESTTING EARTHQUAKE DETECTION ALGORITHM
 hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
@@ -130,7 +138,7 @@ dft = h5py.File(hdf5File, 'r') # r = read only
 print(list(dft.keys())) # hdf5 files can group datasets together under different 'keys' (like dictionaries) - only one key means only one group 'data'
 print(list(dft['data'].keys())[0:10]) # checking how many keys are in the group dft['data'] - 'Data' is only one group, with 200,000 other groups of data.
 
-dset = dft['data']['109C.TA_20070109140205_EV'] # random waveform
+dset = dft['data'][list(dft['data'].keys())[0]] # random waveform
 print(dset.shape, dset.dtype) # to get an idea of what the DataSet looks like (dim: 6000 x 3, type: float32)
 print(dset.attrs.keys()) # print keys for this dataset's metadat (has useful information e.g. p_status); similar to a dictionary but not quite
 
