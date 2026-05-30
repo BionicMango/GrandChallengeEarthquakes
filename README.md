@@ -1,7 +1,7 @@
 # GrandChallengeEarthquakes
 ENGG1810 (2026 Semester 1) Grand Challenge Project - Data &amp; Analysis
 
-# Output from the first dataset
+## Output from the first dataset
 (File: 'chunk2.hdf5', dataset name = '109C.TA_20060723155859_EV')
 ```windowSize = 80```
 ```threshold = {'P': 200, 'S': 4750}```
