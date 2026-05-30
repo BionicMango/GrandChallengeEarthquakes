@@ -9,8 +9,9 @@ sampleF = 100 # in Hz, i.e. 100 samples every second (every 0.01 time step)
 time = np.arange(0, 60, 1/sampleF)
 windowSize = 80
 threshold = {
-    'P': 200,
-    'S': 4750
+    'P': 300,
+    'S': 6000,
+    'C': 3000
 }
 
 # Function: Find P and S waves by using thresholds
@@ -41,6 +42,7 @@ def slidingAverage(data, windowSize):
 
     return slidingAves
 
+# Plotting Function (to plot the three waveforms + onset/coda nicely)
 def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 12000)): # onset = (p wave onset time, s wave onset time, coda (end)), 
     fig, ax = plt.subplots(data.shape[1], 1, figsize=(15, 15))
     i = 0 # looping variable for each axis
@@ -88,8 +90,8 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 12000)
             # Coda End Sample
             ax[i].annotate(
                 f'Coda at {onset[2]:.1f}',
-                xy = (onset[2] + 0.5, min(waveform) - 2/3 * margins[1]),
-                xytext = (onset[2] + 0.5, min(waveform) - 2/3* margins[1]),
+                xy = (onset[2] + 0.5, max(waveform)),
+                xytext = (onset[2] + 0.5, max(waveform)),
                 fontweight = 'bold',
                 color = 'deepskyblue'
             )
@@ -99,6 +101,7 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 12000)
 
     plt.show()
 
+# Combined earthquake detection function
 def earthquakeDetection(dset, margins=(0.5, 12000)):
     data = np.array(dset)
 
@@ -115,7 +118,7 @@ def earthquakeDetection(dset, margins=(0.5, 12000)):
     onsetAlg = (
         (1/sampleF) * min(aboveThreshold(dataSmoothed[:, 0], threshold['P'])[0], aboveThreshold(dataSmoothed[:, 1], threshold['P'])[0]),
         (1/sampleF) * min(aboveThreshold(dataSmoothed[:, 0], threshold['S'])[0], aboveThreshold(dataSmoothed[:, 1], threshold['S'])[0]), # takes the first onset time of any direction
-        (1/sampleF) * np.mean([aboveThreshold(dataSmoothed[:, 0], threshold['S'])[1], aboveThreshold(dataSmoothed[:, 1], threshold['S'])[1]]) # mean offset of S wave = coda time
+        (1/sampleF) * max([aboveThreshold(dataSmoothed[:, 0], threshold['C'])[1], aboveThreshold(dataSmoothed[:, 1], threshold['C'])[1]]) # last coda time
     )
     plotData(time, data, onset=onsetAlg, margins=margins)
     plotData(time, dataSmoothed, onset=onsetAlg, margins=margins)
@@ -127,7 +130,8 @@ dft = h5py.File(hdf5File, 'r') # r = read only
 print(list(dft.keys())) # hdf5 files can group datasets together under different 'keys' (like dictionaries) - only one key means only one group 'data'
 print(list(dft['data'].keys())[0:10]) # checking how many keys are in the group dft['data'] - 'Data' is only one group, with 200,000 other groups of data.
 
-dset = dft['data']['109C.TA_20060723155859_EV'] # this is just the first DataSet in the Group dft['data']
+dset = dft['data']['109C.TA_20070109140205_EV'] # random waveform
 print(dset.shape, dset.dtype) # to get an idea of what the DataSet looks like (dim: 6000 x 3, type: float32)
 print(dset.attrs.keys()) # print keys for this dataset's metadat (has useful information e.g. p_status); similar to a dictionary but not quite
+
 earthquakeDetection(dset)
