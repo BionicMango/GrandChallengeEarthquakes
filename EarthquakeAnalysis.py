@@ -9,9 +9,9 @@ sampleF = 100 # in Hz, i.e. 100 samples every second (every 0.01 time step)
 time = np.arange(0, 60, 1/sampleF)
 windowSize = 80
 threshold = {
-    'P': 300,
-    'S': 6000,
-    'C': 3000
+    'P': 200,
+    'S': 4750,
+    'C': 5500
 }
 
 # Function: Find P and S waves by using thresholds
