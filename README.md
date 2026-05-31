@@ -17,7 +17,7 @@ Mousavi, S. M., Sheng, Y., Zhu, W., Beroza G.C., (2019).  STanford EArthquake Da
 
 (File: 'chunk2.hdf5', dataset name = '109C.TA_20060723155859_EV')
 ```windowSize = 80```
-```threshold = {'P': 200, 'S': 4750}```
+```threshRatio = {'P': 0.018, 'S': 0.15, 'C': 0.090}```
 
 Plot of waveforms w/ manual onset/coda times:
 
