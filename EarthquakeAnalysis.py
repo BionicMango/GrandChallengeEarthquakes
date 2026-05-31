@@ -113,14 +113,14 @@ def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
         'C': np.max(data[:, :2])
     }
     newThresh = {
-        'P': np.max((threshRatio['P']*dataMax['P'], 20)),
-        'S': np.max((threshRatio['S']*dataMax['S'], 20)),
-        'C': np.max((threshRatio['C']*dataMax['C'], 20))
+        'P': np.max((threshRatio['P']*dataMax['P'], 0)),
+        'S': np.max((threshRatio['S']*dataMax['S'], 0)),
+        'C': np.max((threshRatio['C']*dataMax['C'], 0))
     }
     onsetAlg = (
         (1/sampleF) * aboveThreshold(dataSmoothed[:, 2], newThresh['P'])[0], # Vertical direction more accurate for this one only
-        (1/sampleF) * np.nanmean((aboveThreshold(dataSmoothed[:, 0], newThresh['S']*dataMax['S'])[0], aboveThreshold(dataSmoothed[:, 1], newThresh['S'])[0])), # takes the mean onset time
-        (1/sampleF) * np.nanmean((aboveThreshold(dataSmoothed[:, 0], newThresh['C']*dataMax['C'])[-1], aboveThreshold(dataSmoothed[:, 1], newThresh['C'])[-1])) # last coda time
+        (1/sampleF) * np.nanmean((aboveThreshold(dataSmoothed[:, 0], newThresh['S'])[0], aboveThreshold(dataSmoothed[:, 1], newThresh['S'])[0])), # takes the mean onset time
+        (1/sampleF) * np.nanmean((aboveThreshold(dataSmoothed[:, 0], newThresh['C'])[-1], aboveThreshold(dataSmoothed[:, 1], newThresh['C'])[-1])) # last coda time
     )
 
     if plotGraph:
