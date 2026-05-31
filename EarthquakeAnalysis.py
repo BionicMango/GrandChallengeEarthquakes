@@ -89,22 +89,10 @@ def aboveThreshold(waveform, thresh): # returns index of first time it exceeds t
             aboveThresh.append(i) # returns the index where this is true
         i += 1
 
-    return int(aboveThresh[0]), int(aboveThresh[-1])
-
-
-    slidingAves = np.zeros(data.shape)
-    end = (-int(windowSize - 1)//2,int(windowSize - 1)//2) # endpoints for each average - half a window size around each point
-
-    for col in range(data.shape[1]):
-        for row in range(data.shape[0]): # depending on if the index is near the end or not.
-            if row < windowSize/2:
-                slidingAves[row, col] = np.mean(np.abs(data[:row+end[1], col])) # mean of values between 0 and a + 1/2 window size
-            elif row > data.shape[0] - windowSize/2:
-                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:, col])) # mean of values between a - 1/2 window size and last entry
-            else:
-                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:row+end[1], col])) # mean of values between 1/2 window size either side
-
-    return slidingAves
+    if len(aboveThresh) > 0:
+        return int(aboveThresh[0]), int(aboveThresh[-1])
+    else:
+        return None, None
 
 # Combined earthquake detection function
 def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
@@ -181,4 +169,4 @@ df.columns = ['P Wave Onset Diff', 'S Wave Onset Diff', 'Coda Diff']
 df['S-P Lag (s)'] = spLag # adding S-P Lag column
 
 print(df)
-df.to_csv(r'C:\Users\teert\Documents\GitHub\GrandChallengeEarthquakes\output.csv', index=False)
+#df.to_csv(r'C:\Users\teert\Documents\GitHub\GrandChallengeEarthquakes\output.csv', index=False)
