@@ -4,44 +4,6 @@ import pandas as pd # for csv handling as DataFrames and Series
 import matplotlib.pyplot as plt # for plotting
 import h5py # for reading hdf5 files which are highly optimised data storages
 
-### CONSTANTS ###
-sampleF = 100 # in Hz, i.e. 100 samples every second (every 0.01 time step)
-time = np.arange(0, 60, 1/sampleF)
-windowSize = 80
-threshRatio = { # as a ratio of the max smoothened data height
-    'P': 1.8e-2,
-    'S': 1.5e-1,
-    'C': 9.0e-2
-}
-
-# Function: Find P and S waves by using thresholds
-def aboveThreshold(waveform, thresh): # returns index of first time it exceeds threshold
-    aboveThresh = []
-
-    i = 0 # looping variable (easier to use while loop than for loop in this case)
-    while i < waveform.shape[0]:
-        if waveform[i] > thresh:
-            aboveThresh.append(i) # returns the index where this is true
-        i += 1
-
-    return int(aboveThresh[0]), int(aboveThresh[-1])
-
-# Function: Windowing / Sliding Average function
-def slidingAverage(data, windowSize):
-    slidingAves = np.zeros(data.shape)
-    end = (-int(windowSize - 1)//2,int(windowSize - 1)//2) # endpoints for each average - half a window size around each point
-
-    for col in range(data.shape[1]):
-        for row in range(data.shape[0]): # depending on if the index is near the end or not.
-            if row < windowSize/2:
-                slidingAves[row, col] = np.mean(np.abs(data[:row+end[1], col])) # mean of values between 0 and a + 1/2 window size
-            elif row > data.shape[0] - windowSize/2:
-                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:, col])) # mean of values between a - 1/2 window size and last entry
-            else:
-                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:row+end[1], col])) # mean of values between 1/2 window size either side
-
-    return slidingAves
-
 # Plotting Function (to plot the three waveforms + onset/coda nicely)
 def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 5000)): # onset = (p wave onset time, s wave onset time, coda (end)), 
     fig, ax = plt.subplots(data.shape[1], 1, figsize=(15, 15))
@@ -101,6 +63,49 @@ def plotData(time, data, onset: tuple = (None, None, None), margins=(0.5, 5000))
 
     plt.show()
 
+# Function: Windowing / Sliding Average function
+def slidingAverage(data, windowSize):
+    slidingAves = np.zeros(data.shape)
+    end = (-int(windowSize - 1)//2,int(windowSize - 1)//2) # endpoints for each average - half a window size around each point
+
+    for col in range(data.shape[1]):
+        for row in range(data.shape[0]): # depending on if the index is near the end or not.
+            if row < windowSize/2:
+                slidingAves[row, col] = np.mean(np.abs(data[:row+end[1], col])) # mean of values between 0 and a + 1/2 window size
+            elif row > data.shape[0] - windowSize/2:
+                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:, col])) # mean of values between a - 1/2 window size and last entry
+            else:
+                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:row+end[1], col])) # mean of values between 1/2 window size either side
+
+    return slidingAves
+
+# Function: Find P and S waves by using thresholds
+def aboveThreshold(waveform, thresh): # returns index of first time it exceeds threshold
+    aboveThresh = []
+
+    i = 0 # looping variable (easier to use while loop than for loop in this case)
+    while i < waveform.shape[0]:
+        if waveform[i] > thresh:
+            aboveThresh.append(i) # returns the index where this is true
+        i += 1
+
+    return int(aboveThresh[0]), int(aboveThresh[-1])
+
+
+    slidingAves = np.zeros(data.shape)
+    end = (-int(windowSize - 1)//2,int(windowSize - 1)//2) # endpoints for each average - half a window size around each point
+
+    for col in range(data.shape[1]):
+        for row in range(data.shape[0]): # depending on if the index is near the end or not.
+            if row < windowSize/2:
+                slidingAves[row, col] = np.mean(np.abs(data[:row+end[1], col])) # mean of values between 0 and a + 1/2 window size
+            elif row > data.shape[0] - windowSize/2:
+                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:, col])) # mean of values between a - 1/2 window size and last entry
+            else:
+                slidingAves[row, col] = np.mean(np.abs(data[row+end[0]:row+end[1], col])) # mean of values between 1/2 window size either side
+
+    return slidingAves
+
 # Combined earthquake detection function
 def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
     data = np.array(dset)
@@ -138,6 +143,16 @@ def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
     spLag = onsetAlg[1] - onsetAlg[0] # the S-P lag = time between p wave onset and s wave onset, useful for calculating distance to epicentre since p and s waves travel at different speeds
     
     return onsetDiff, spLag
+
+### CONSTANTS ###
+sampleF = 100 # in Hz, i.e. 100 samples every second (every 0.01 time step)
+time = np.arange(0, 60, 1/sampleF)
+windowSize = 80
+threshRatio = { # as a ratio of the max smoothened data height
+    'P': 1.8e-2,
+    'S': 1.5e-1,
+    'C': 9.0e-2
+}
 
 ## TESTTING EARTHQUAKE DETECTION ALGORITHM
 hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
