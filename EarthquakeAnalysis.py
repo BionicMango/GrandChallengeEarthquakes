@@ -113,9 +113,9 @@ def earthquakeDetection(dset, plotGraph: bool = False, margins=(0.5, 12000)):
         'C': np.max(data[:, :2])
     }
     newThresh = {
-        'P': np.max((threshRatio['P']*dataMax['P'], 0)),
-        'S': np.max((threshRatio['S']*dataMax['S'], 0)),
-        'C': np.max((threshRatio['C']*dataMax['C'], 0))
+        'P': np.max((threshRatio['P']*dataMax['P'], 20)),
+        'S': np.max((threshRatio['S']*dataMax['S'], 20)),
+        'C': np.max((threshRatio['C']*dataMax['C'], 20))
     }
     onsetAlg = (
         (1/sampleF) * aboveThreshold(dataSmoothed[:, 2], newThresh['P'])[0], # Vertical direction more accurate for this one only
