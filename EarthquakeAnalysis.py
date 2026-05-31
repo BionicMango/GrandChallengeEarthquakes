@@ -140,7 +140,7 @@ def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
     for i in range(3):
         onsetDiff[i] = onsetAlg[i] - onsetManual[i]
 
-    spLag = onsetAlg[1] - onsetAlg[0] # the S-P lag = time between p wave onset and s wave onset, useful for calculating distance to epicentre since p and s waves travel at different speeds
+    spLag = onsetAlg[1] - onsetAlg[0] # the S-P lag = time between p wave onset and s wave onset, useful for calculating distance to epicenter since p and s waves travel at different speeds
     
     return onsetDiff, spLag
 
