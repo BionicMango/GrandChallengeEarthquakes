@@ -95,7 +95,7 @@ def aboveThreshold(waveform, thresh): # returns index of first time it exceeds t
         return np.nan, np.nan
 
 # Combined earthquake detection function
-def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
+def earthquakeDetection(dset, plotGraph: bool = False, margins=(0.5, 12000)):
     data = np.array(dset)
 
     # Plot manual onset/offset times data
