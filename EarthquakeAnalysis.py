@@ -92,7 +92,7 @@ def aboveThreshold(waveform, thresh): # returns index of first time it exceeds t
     if len(aboveThresh) > 0:
         return int(aboveThresh[0]), int(aboveThresh[-1])
     else:
-        return None, None
+        return np.nan, np.nan
 
 # Combined earthquake detection function
 def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
@@ -112,10 +112,15 @@ def earthquakeDetection(dset, margins=(0.5, 12000), plotGraph: bool = False):
         'S': np.max(data[:, :2]),
         'C': np.max(data[:, :2])
     }
+    newThresh = {
+        'P': np.max((threshRatio['P']*dataMax['P'], 20)),
+        'S': np.max((threshRatio['S']*dataMax['S'], 20)),
+        'C': np.max((threshRatio['C']*dataMax['C'], 20))
+    }
     onsetAlg = (
-        (1/sampleF) * aboveThreshold(dataSmoothed[:, 2], threshRatio['P']*dataMax['P'])[0], # Vertical direction more accurate for this one only
-        (1/sampleF) * 0.5*(aboveThreshold(dataSmoothed[:, 0], threshRatio['S']*dataMax['S'])[0] + aboveThreshold(dataSmoothed[:, 1], threshRatio['S']*dataMax['S'])[0]), # takes the mean onset time
-        (1/sampleF) * 0.5*(aboveThreshold(dataSmoothed[:, 0], threshRatio['C']*dataMax['C'])[-1] + aboveThreshold(dataSmoothed[:, 1], threshRatio['C']*dataMax['C'])[-1]) # last coda time
+        (1/sampleF) * aboveThreshold(dataSmoothed[:, 2], newThresh['P'])[0], # Vertical direction more accurate for this one only
+        (1/sampleF) * np.nanmean((aboveThreshold(dataSmoothed[:, 0], newThresh['S']*dataMax['S'])[0], aboveThreshold(dataSmoothed[:, 1], newThresh['S'])[0])), # takes the mean onset time
+        (1/sampleF) * np.nanmean((aboveThreshold(dataSmoothed[:, 0], newThresh['C']*dataMax['C'])[-1], aboveThreshold(dataSmoothed[:, 1], newThresh['C'])[-1])) # last coda time
     )
 
     if plotGraph:
@@ -141,6 +146,7 @@ threshRatio = { # as a ratio of the max smoothened data height
     'S': 1.5e-1,
     'C': 9.0e-2
 }
+Vs, Vp = 4, 6 # Speed of s waves and p waves in km/s respectively
 
 ## TESTTING EARTHQUAKE DETECTION ALGORITHM
 hdf5File = r'C:\Users\teert\Desktop\Grand Challenge\chunk2.hdf5'
@@ -165,8 +171,9 @@ for i in range(numDsets):
 
 # Print these differences to csv to view later
 df = pd.DataFrame(onsetDiffs)
-df.columns = ['P Wave Onset Diff', 'S Wave Onset Diff', 'Coda Diff']
-df['S-P Lag (s)'] = spLag # adding S-P Lag column
+df.columns = ['P Wave Onset Error', 'S Wave Onset Error', 'Coda Error']
+df['S-P Lag'] = spLag # adding S-P Lag column
+df['Distance from Epicenter (km)'] = df['S-P Lag'] / (1/Vs - 1/Vp) # calculating epicentral distance from s-p lag and adding to df
 
 print(df)
 df.to_csv(r'C:\Users\teert\Documents\GitHub\GrandChallengeEarthquakes\output.csv', index=False)
