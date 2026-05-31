@@ -169,4 +169,4 @@ df.columns = ['P Wave Onset Diff', 'S Wave Onset Diff', 'Coda Diff']
 df['S-P Lag (s)'] = spLag # adding S-P Lag column
 
 print(df)
-#df.to_csv(r'C:\Users\teert\Documents\GitHub\GrandChallengeEarthquakes\output.csv', index=False)
+df.to_csv(r'C:\Users\teert\Documents\GitHub\GrandChallengeEarthquakes\output.csv', index=False)
