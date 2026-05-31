@@ -4,7 +4,7 @@ ENGG1810 (2026 Semester 1) Grand Challenge Project - Data &amp; Analysis
 The data cleanup and analysis was conducted in the 'EartquakeAnalysis.py' python file. The process included:
 - Extracting Waveform Data and Metadata (metadata provided information on the manual p wave onset, s wave onset, and coda times)
 - Smoothing the desired waveforms using a sliding average (using a windowing function)
-- Using thresholds, finding the p wave onset, s wave onset, and coda times
+- Using thresholds (as a ratio of the maximum amplitude), finding the p wave onset, s wave onset, and coda times
 - Comparing the manual and algorithm's times (i.e. finding their difference)
 
 This algorithm was applied to 200 waveforms, and the appropriate thresholds chosen by trial and error. The differences between the algorithm's and manual times were outputted as a csv file, which can be accessed in 'output.csv'.
